@@ -7,11 +7,10 @@ package entidad;
 import io.quarkus.mongodb.panache.PanacheMongoEntity;
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import org.bson.types.ObjectId;
 
 public class deuda extends PanacheMongoEntity{
     
-    public ObjectId idmatricula;
+    public int idmatricula;
     public String descripcion;
     public BigDecimal monto;
     public String dependencia;
@@ -20,7 +19,7 @@ public class deuda extends PanacheMongoEntity{
     public deuda() {
     }
 
-    public deuda(ObjectId idmatricula, String descripcion, BigDecimal monto, String dependencia, LocalDate vencimiento) {
+    public deuda(int idmatricula, String descripcion, BigDecimal monto, String dependencia, LocalDate vencimiento) {
         this.idmatricula = idmatricula;
         this.descripcion = descripcion;
         this.monto = monto;

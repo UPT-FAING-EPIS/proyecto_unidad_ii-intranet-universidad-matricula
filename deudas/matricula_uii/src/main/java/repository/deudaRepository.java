@@ -3,24 +3,28 @@
  * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
  */
 package repository;
-import entidad.matricula;
+
+import entidad.deuda;
 import io.quarkus.mongodb.panache.PanacheMongoRepository;
 import io.quarkus.panache.common.Sort;
 import jakarta.enterprise.context.ApplicationScoped;
 import java.util.List;
+
 /**
  *
  * @author LEGION
  */
 @ApplicationScoped
-public class matriculaRepository implements PanacheMongoRepository<matricula>{
+public class deudaRepository implements PanacheMongoRepository<deuda>{
     
-     public matricula findByIdusuario(int idusuario){
-    return find("idusuario", idusuario).firstResult();
+    
+     public deuda findByIdmatricula(int idmatricula){
+    return find("idmatricula", idmatricula).firstResult();
     }
     
-    public List<matricula> findOrderedIdusuario(){
-    return listAll(Sort.by("idusuario"));
-    
+    public List<deuda> findOrderedIdmatricula(){
+    return listAll(Sort.by("idmatricula"));
+   
     }
+    
 }

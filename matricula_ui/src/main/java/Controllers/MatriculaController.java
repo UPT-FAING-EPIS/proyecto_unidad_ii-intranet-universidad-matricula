@@ -7,22 +7,25 @@ import Entities.Beca;
 import Entities.Estado;
 import Entities.Matricula;
 import Entities.ProntoPago;
+import Entities.Rabbitmessage;
 import Entities.Semestre;
 import Entities.Usuario;
 import Services.MatriculaService;
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Past;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.Date;
 import java.util.List;
-
+import org.eclipse.microprofile.reactive.messaging.Channel;
+import org.eclipse.microprofile.reactive.messaging.Emitter;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.text.SimpleDateFormat;
 /**
  *
  * @author LEGION
@@ -40,34 +43,109 @@ public class MatriculaController {
         this.matriculaService = matriculaService;
     }
 
+    @Inject
+    @Channel("logs")
+    Emitter<String> emitter;
+    
+    
+    private void enviarMensajeRabbitMQ(String mensaje) {
+    Rabbitmessage rabbitmessage = new Rabbitmessage();
+    rabbitmessage.setTimestamp(new Date());
+    rabbitmessage.setLevel("INFO");
+    rabbitmessage.setMessage(mensaje);
+
+    ObjectMapper mapper = new ObjectMapper();
+    SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
+    mapper.setDateFormat(dateFormat);
+
+    String json;
+    try {
+        json = mapper.writeValueAsString(rabbitmessage);
+    } catch (JsonProcessingException e) {
+        json = "";
+    }
+
+    emitter.send(json);
+}
+    
+    
     @GET
+    @Produces(MediaType.APPLICATION_JSON)
     public List<Matricula> getMatriculas() {
-        return matriculaService.getAllMatriculas();
+        enviarMensajeRabbitMQ("Se han listado todas las matrículas");
+    return matriculaService.getAllMatriculas();
     }
 
-    @GET
-    @Path("/{id}")
-    public Matricula getMatricula(@PathParam("id") int idMatricula) throws NotFoundException {
+     @GET
+@Path("/{id}")
+public Matricula getMatricula(@PathParam("id") int idMatricula) throws NotFoundException {
+    try {
+        enviarMensajeRabbitMQ("Se ha listado las matriculas en base al Id.");
         return matriculaService.getMatriculaById(idMatricula);
+    } catch (NotFoundException e) {
+        return null; 
     }
+}
 
-    @POST
-    public Matricula createMatricula(@Valid MatriculaDto matriculaDto) {
-        return matriculaService.saveMatricula(matriculaDto.toMatricula());
+ @POST
+public Matricula createMatricula(@Valid MatriculaDto matriculaDto) {
+    Matricula matricula = null;
+    try {
+        matricula = matriculaService.saveMatricula(matriculaDto.toMatricula());
+        
+        int matriculaId = matricula.getIdMatricula();
+        BigDecimal matriculaMonto = matricula.getTotal();
+        String mensaje = "Se ha creado una nueva matrícula con ID: " + matriculaId + " y monto: " + matriculaMonto;
+
+        // Enviar el mensaje a RabbitMQ
+        enviarMensajeRabbitMQ(mensaje);
+    } catch (Exception e) {
+        // Maneja el error y retorna la respuesta apropiada (por ejemplo, un Response de error)
+        e.printStackTrace();
+        throw new WebApplicationException("Error al crear la matrícula.", Response.Status.INTERNAL_SERVER_ERROR);
     }
+    return matricula;
+}
 
     @PUT
-    @Path("/{id}")
-    public Matricula updateMatricula(@PathParam("id") int idMatricula, @Valid MatriculaDto matriculaDto) throws NotFoundException {
-        return matriculaService.updateMatricula(idMatricula, matriculaDto.toMatricula());
+@Path("/{id}")
+public Matricula updateMatricula(@PathParam("id") int idMatricula, @Valid MatriculaDto matriculaDto) throws NotFoundException {
+    try {
+        // Intenta actualizar la matrícula
+        Matricula matricula = matriculaService.updateMatricula(idMatricula, matriculaDto.toMatricula());
+
+        // Si la matrícula se actualiza correctamente, envía el mensaje a RabbitMQ
+        enviarMensajeRabbitMQ("Se ha modificado una matrícula.");
+
+        return matricula;
+    } catch (NotFoundException e) {
+        // Maneja el error de NotFoundException y retorna la respuesta apropiada (por ejemplo, un Response de error)
+        e.printStackTrace();
+        throw new WebApplicationException("Matrícula no encontrada.", Response.Status.NOT_FOUND);
+    } catch (Exception e) {
+        // Maneja otros errores y retorna la respuesta apropiada (por ejemplo, un Response de error)
+        e.printStackTrace();
+        throw new WebApplicationException("Error al actualizar la matrícula.", Response.Status.INTERNAL_SERVER_ERROR);
     }
+}
 
     @DELETE
-    @Path("/{id}")
-    public Response deleteMatricula(@PathParam("id") int idMatricula) throws NotFoundException {
+@Path("/{id}")
+public Response deleteMatricula(@PathParam("id") int idMatricula) throws NotFoundException {
+    try {
+        enviarMensajeRabbitMQ("Se ha eliminado una matrícula");
         matriculaService.deleteMatricula(idMatricula);
         return Response.status(Response.Status.NO_CONTENT).build();
+    } catch (NotFoundException e) {
+        // Maneja el error de NotFoundException y retorna la respuesta apropiada (por ejemplo, un Response de error)
+        e.printStackTrace();
+        throw new WebApplicationException("Matrícula no encontrada.", Response.Status.NOT_FOUND);
+    } catch (Exception e) {
+        // Maneja otros errores y retorna la respuesta apropiada (por ejemplo, un Response de error)
+        e.printStackTrace();
+        throw new WebApplicationException("Error al eliminar la matrícula.", Response.Status.INTERNAL_SERVER_ERROR);
     }
+}
 
     public static class MatriculaDto {
     private Usuario usuario;

@@ -5,7 +5,6 @@
 package resource;
 
 import entidad.deuda;
-import io.vertx.core.json.JsonObject;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.DELETE;
 import jakarta.ws.rs.GET;
@@ -17,8 +16,6 @@ import jakarta.ws.rs.core.Response;
 import java.net.URI;
 import java.net.URISyntaxException;
 import org.bson.types.ObjectId;
-import org.eclipse.microprofile.reactive.messaging.Channel;
-import org.eclipse.microprofile.reactive.messaging.Emitter;
 import repository.deudaRepository;
 
 /**
@@ -49,7 +46,7 @@ public class deudaResource {
     
     @GET
     @Path("/search/{idmatricula}")
-    public Response search(@PathParam("idmatricula") ObjectId idmatricula){
+    public Response search(@PathParam("idmatricula") int idmatricula){
      deuda deuda = repository.findByIdmatricula(idmatricula);
         return deuda != null ? Response.ok(deuda).build() : Response.status(Response.Status.NOT_FOUND).build();
     }
